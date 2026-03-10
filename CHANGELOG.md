@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- Client 자동 재연결 기능 (ClientConfigScreen에서 활성화/간격 설정)
+- Client 수동 재연결 버튼 및 단축키 (`Ctrl+R`)
+
 ### Changed
 
 - `main.py` 단일 파일을 `tcp_socket_tool` 패키지로 모듈 분리

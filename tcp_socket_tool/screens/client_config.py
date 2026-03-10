@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, Input, Label, Static
+from textual.widgets import Button, Footer, Input, Label, Static, Switch
 from textual.screen import Screen
 from textual import on
 
@@ -33,6 +33,15 @@ class ClientConfigScreen(Screen):
     Input {
         margin-top: 0;
     }
+    #reconnect-row {
+        height: 3;
+        align: left middle;
+    }
+    #reconnect-label {
+        margin-left: 1;
+        content-align: left middle;
+        height: 1;
+    }
     #btn-row {
         margin-top: 2;
         align: center middle;
@@ -49,6 +58,12 @@ class ClientConfigScreen(Screen):
             yield Input(placeholder="예: 127.0.0.1", value="127.0.0.1", id="host-input")
             yield Label("포트 번호")
             yield Input(placeholder="예: 9000", id="port-input", type="integer")
+            yield Label("자동 재연결")
+            with Horizontal(id="reconnect-row"):
+                yield Switch(value=False, id="reconnect-switch")
+                yield Static("사용 안 함", id="reconnect-label")
+            yield Label("재연결 간격 (초)")
+            yield Input(placeholder="기본값: 5", id="interval-input", type="number", disabled=True)
             with Horizontal(id="btn-row"):
                 yield Button("연결", id="btn-connect", variant="success")
                 yield Button("뒤로", id="btn-back")
@@ -57,6 +72,17 @@ class ClientConfigScreen(Screen):
     @on(Button.Pressed, "#btn-back")
     def go_back(self) -> None:
         self.app.pop_screen()
+
+    @on(Switch.Changed, "#reconnect-switch")
+    def toggle_reconnect(self, event: Switch.Changed) -> None:
+        interval_input = self.query_one("#interval-input", Input)
+        label = self.query_one("#reconnect-label", Static)
+        if event.value:
+            interval_input.disabled = False
+            label.update("사용")
+        else:
+            interval_input.disabled = True
+            label.update("사용 안 함")
 
     @on(Button.Pressed, "#btn-connect")
     @on(Input.Submitted)
@@ -68,5 +94,13 @@ class ClientConfigScreen(Screen):
             log.warning("ClientConfigScreen: 포트 번호 미입력")
             self.notify("포트 번호를 입력하세요.", severity="error")
             return
-        log.info("ClientConfigScreen: 연결 요청 host=%s port=%s", host, port_str)
-        self.app.switch_screen(ChatScreen(mode="client", host=host, port=int(port_str)))
+        auto_reconnect = self.query_one("#reconnect-switch", Switch).value
+        interval_str = self.query_one("#interval-input", Input).value.strip()
+        reconnect_interval = float(interval_str) if interval_str else 0.0
+        log.info("ClientConfigScreen: 연결 요청 host=%s port=%s auto_reconnect=%s interval=%s",
+                 host, port_str, auto_reconnect, reconnect_interval)
+        self.app.switch_screen(ChatScreen(
+            mode="client", host=host, port=int(port_str),
+            auto_reconnect=auto_reconnect,
+            reconnect_interval=reconnect_interval,
+        ))

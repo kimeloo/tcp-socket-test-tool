@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -15,6 +16,8 @@ from tcp_socket_tool.network import TCPConnection
 
 DEFAULT_RECONNECT_INTERVAL = 5.0
 MIN_RECONNECT_INTERVAL = 1.0
+
+_MOD = "^" if sys.platform == "darwin" else "Ctrl+"
 
 
 class ChatScreen(Screen):
@@ -53,8 +56,9 @@ class ChatScreen(Screen):
     """
 
     BINDINGS = [
-        Binding("escape", "go_home", "처음으로"),
-        Binding("ctrl+r", "reconnect", "재연결", show=True),
+        Binding("escape", "go_home", "처음으로", key_display="Esc"),
+        Binding("ctrl+r", "reconnect", "재연결", key_display=f"{_MOD}R"),
+        Binding("ctrl+q", "quit", "종료", key_display=f"{_MOD}Q"),
     ]
 
     def __init__(
@@ -101,6 +105,11 @@ class ChatScreen(Screen):
             self._run_server()
         else:
             self._run_client()
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "reconnect" and self.mode != "client":
+            return None
+        return True
 
     def _show_reconnect_ui(self, show: bool) -> None:
         """클라이언트 모드에서 재연결/전송 버튼 display를 토글한다."""

@@ -186,11 +186,15 @@ class ChatScreen(Screen):
         while not self._user_closed:
             attempt += 1
             info = self.query_one("#info-bar", Static)
-            info.update(
-                f"[CLIENT]  재연결 대기 중... "
-                f"({self.reconnect_interval:.0f}초 후 시도 #{attempt})"
-            )
-            await asyncio.sleep(self.reconnect_interval)
+            remaining = int(self.reconnect_interval)
+            for sec in range(remaining, 0, -1):
+                if self._user_closed:
+                    return
+                info.update(
+                    f"[CLIENT]  재연결 대기 중... "
+                    f"({sec}초 후 시도 #{attempt})"
+                )
+                await asyncio.sleep(1)
 
             if self._user_closed:
                 break

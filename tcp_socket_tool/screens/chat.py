@@ -1,7 +1,11 @@
 """메인 채팅 화면 (Server / Client 공용)."""
 from __future__ import annotations
 
+import asyncio
+import sys
+
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.widgets import Button, Footer, Input, RichLog, Static
 from textual.screen import Screen
@@ -9,6 +13,11 @@ from textual import on, work
 
 from tcp_socket_tool.logging_config import log, ts, get_local_ip
 from tcp_socket_tool.network import TCPConnection
+
+DEFAULT_RECONNECT_INTERVAL = 5.0
+MIN_RECONNECT_INTERVAL = 0.0001
+
+_MOD = "^" if sys.platform == "darwin" else "Ctrl+"
 
 
 class ChatScreen(Screen):
@@ -39,21 +48,42 @@ class ChatScreen(Screen):
         width: 10;
         margin-left: 1;
     }
+    #btn-reconnect {
+        width: 12;
+        margin-left: 1;
+        display: none;
+    }
     """
 
     BINDINGS = [
-        ("escape", "go_home", "처음으로"),
+        Binding("escape", "go_home", "처음으로", key_display="Esc"),
+        Binding("ctrl+r", "reconnect", "재연결", key_display=f"{_MOD}R"),
     ]
 
-    def __init__(self, mode: str, port: int = 0, host: str = "127.0.0.1"):
+    def __init__(
+        self,
+        mode: str,
+        port: int = 0,
+        host: str = "127.0.0.1",
+        auto_reconnect: bool = False,
+        reconnect_interval: float = 0.0,
+    ):
         super().__init__()
         self.mode = mode          # "server" or "client"
         self.target_port = port
         self.target_host = host
+        self.auto_reconnect = auto_reconnect
+        self.reconnect_interval = (
+            max(reconnect_interval, MIN_RECONNECT_INTERVAL)
+            if reconnect_interval > 0
+            else DEFAULT_RECONNECT_INTERVAL
+        )
+        self._mode_label = "SERVER" if mode == "server" else "CLIENT"
+        self._user_closed = False
         self._conn = TCPConnection(
             on_connected=self._on_connected,
             on_disconnected=self._on_disconnected,
-            on_message=self._on_message,
+            on_message=self._on_net_message,
             on_error=self._on_error,
             on_info=self._on_info,
         )
@@ -61,12 +91,12 @@ class ChatScreen(Screen):
     # ── UI 구성 ──────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
-        mode_label = "SERVER" if self.mode == "server" else "CLIENT"
-        yield Static(f"[{mode_label}]  연결 대기 중...", id="info-bar")
+        yield Static(f"[{self._mode_label}]  연결 대기 중...", id="info-bar")
         yield RichLog(id="log", highlight=True, markup=True)
         with Horizontal(id="input-row"):
             yield Input(placeholder="메시지 입력 후 Enter", id="msg-input", disabled=True)
             yield Button("전송", id="btn-send", variant="primary", disabled=True)
+            yield Button("재연결", id="btn-reconnect", variant="warning")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -75,9 +105,22 @@ class ChatScreen(Screen):
         else:
             self._run_client()
 
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "reconnect" and self.mode != "client":
+            return None
+        return True
+
+    def _show_reconnect_ui(self, show: bool) -> None:
+        """클라이언트 모드에서 재연결/전송 버튼 display를 토글한다."""
+        if self.mode != "client":
+            return
+        self.query_one("#btn-send", Button).display = not show
+        self.query_one("#btn-reconnect", Button).display = show
+
     def action_go_home(self) -> None:
         """연결 정리 후 시작 화면으로 돌아간다."""
         log.info("ChatScreen[%s]: 홈으로 복귀 (연결 정리)", self.mode)
+        self._user_closed = True
         self._conn.close()
         from tcp_socket_tool.screens.start import StartScreen
         self.app.switch_screen(StartScreen())
@@ -86,30 +129,31 @@ class ChatScreen(Screen):
 
     def _on_connected(self, peer: str) -> None:
         log.info("ChatScreen[%s]: 연결 확립 peer=%s", self.mode, peer)
-        mode_label = "SERVER" if self.mode == "server" else "CLIENT"
         info = self.query_one("#info-bar", Static)
-        info.update(f"[{mode_label}]  연결됨: {peer}")
+        info.update(f"[{self._mode_label}]  연결됨: {peer}")
         self.query_one("#msg-input", Input).disabled = False
         self.query_one("#btn-send", Button).disabled = False
+        self._show_reconnect_ui(False)
         richlog = self.query_one("#log", RichLog)
         richlog.write(f"[green][{ts()}] 연결 성공: {peer}[/green]")
 
     def _on_disconnected(self, peer: str) -> None:
         log.info("ChatScreen[%s]: 연결 끊김 peer=%s", self.mode, peer or "(unknown)")
-        mode_label = "SERVER" if self.mode == "server" else "CLIENT"
         info = self.query_one("#info-bar", Static)
         if self.mode == "server":
             local_ip = get_local_ip()
-            info.update(f"[{mode_label}]  {local_ip}:{self.target_port}  |  연결 대기 중...")
+            info.update(f"[{self._mode_label}]  {local_ip}:{self.target_port}  |  연결 대기 중...")
         else:
-            info.update(f"[{mode_label}]  연결 끊김")
+            info.update(f"[{self._mode_label}]  연결 끊김")
         self.query_one("#msg-input", Input).disabled = True
         self.query_one("#btn-send", Button).disabled = True
+        if not self._user_closed:
+            self._show_reconnect_ui(True)
         richlog = self.query_one("#log", RichLog)
         msg = "연결 끊김" if not peer else f"{peer} 연결 끊김"
         richlog.write(f"[yellow][{ts()}] {msg}[/yellow]")
 
-    def _on_message(self, peer: str, text: str) -> None:
+    def _on_net_message(self, peer: str, text: str) -> None:
         richlog = self.query_one("#log", RichLog)
         richlog.write(f"[bold green][{ts()}] [상대] {text}[/bold green]")
 
@@ -123,18 +167,71 @@ class ChatScreen(Screen):
             self.target_port = self._conn.actual_port
             local_ip = get_local_ip()
             info = self.query_one("#info-bar", Static)
-            info.update(f"[SERVER]  {local_ip}:{self.target_port}  |  연결 대기 중...")
+            info.update(f"[{self._mode_label}]  {local_ip}:{self.target_port}  |  연결 대기 중...")
         richlog.write(f"[green][{ts()}] {msg}[/green]")
 
     # ── 네트워크 작업 (@work 래퍼) ────────────────────────────
 
-    @work(exclusive=True)
+    @work(exclusive=True, group="server")
     async def _run_server(self) -> None:
         await self._conn.start_server(self.target_port)
 
-    @work(exclusive=True)
+    @work(exclusive=True, group="client")
     async def _run_client(self) -> None:
         await self._conn.connect(self.target_host, self.target_port)
+
+        if self._user_closed:
+            return
+
+        if not self._conn.connected:
+            self._show_reconnect_ui(True)
+            if self.auto_reconnect:
+                await self._auto_reconnect_loop()
+
+    async def _auto_reconnect_loop(self) -> None:
+        """자동 재연결 루프. 연결 성공 또는 사용자 종료까지 반복한다."""
+        attempt = 0
+        while not self._user_closed:
+            attempt += 1
+            info = self.query_one("#info-bar", Static)
+            remaining = self.reconnect_interval
+            while remaining > 1e-9 and not self._user_closed:
+                if remaining >= 1 and remaining % 1 == 0:
+                    display_sec = f"{int(remaining)}"
+                else:
+                    display_sec = f"{remaining:.1f}"
+                info.update(
+                    f"[{self._mode_label}]  재연결 대기 중... "
+                    f"({display_sec}초 후 시도 #{attempt})"
+                )
+                step = min(1.0, remaining)
+                await asyncio.sleep(step)
+                remaining -= step
+
+            if self._user_closed:
+                break
+
+            richlog = self.query_one("#log", RichLog)
+            richlog.write(f"[yellow][{ts()}] 재연결 시도 중... (시도 #{attempt})[/yellow]")
+            info.update(f"[{self._mode_label}]  재연결 시도 중... (시도 #{attempt})")
+
+            await self._conn.connect(self.target_host, self.target_port)
+
+            if self._user_closed or self._conn.connected:
+                break
+
+    # ── 재연결 ──────────────────────────────────────────────
+
+    def action_reconnect(self) -> None:
+        """수동 재연결 (Ctrl+R)."""
+        if self.mode != "client" or self._conn.connected:
+            return
+        log.info("ChatScreen[client]: 수동 재연결 요청")
+        self._run_client()  # exclusive=True → 기존 worker 취소 후 새로 시작
+
+    @on(Button.Pressed, "#btn-reconnect")
+    def manual_reconnect(self) -> None:
+        self.action_reconnect()
 
     # ── 메시지 전송 ──────────────────────────────────────────
 

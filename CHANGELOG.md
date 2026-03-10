@@ -25,6 +25,7 @@
 - Claude Code Review GitHub Actions 워크플로우 추가
 - Claude PR Assistant GitHub Actions 워크플로우 추가
 - GitHub Actions 워크플로우 권한 write로 상향
+- Claude Code Review 워크플로우에 `track_progress`, `github_token` 추가 (PR 리뷰 결과 미출력 버그 수정)
 
 ### Chore
 

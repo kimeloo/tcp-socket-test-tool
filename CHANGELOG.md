@@ -11,6 +11,10 @@
 
 ### Changed
 
+- ChatScreen 버튼 토글 로직을 `_show_reconnect_ui()` 헬퍼로 통합
+- 자동 재연결 루프를 `_auto_reconnect_loop()`으로 분리하여 `_run_client()` 단순화
+- mode_label 중복 계산을 `_mode_label` 속성으로 통합
+- 불필요한 `_reconnecting` 플래그 제거 (`@work(exclusive=True)`가 이미 처리)
 - `main.py` 단일 파일을 `tcp_socket_tool` 패키지로 모듈 분리
 - `TCPConnection` 클래스 도입으로 네트워크 레이어와 TUI 레이어 분리
 - 에러 코드 위치를 새 모듈 경로로 업데이트

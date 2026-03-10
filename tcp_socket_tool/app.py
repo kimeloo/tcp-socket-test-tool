@@ -25,9 +25,9 @@ class TCPSocketApp(App):
         Binding("ctrl+q", "quit", "종료", key_display=f"{_MOD}Q"),
     ]
 
-    async def action_command_palette(self) -> None:
-        self.ENABLE_COMMAND_PALETTE = True
-        await super().action_command_palette()
+    def action_command_palette(self) -> None:
+        self.use_command_palette = True
+        super().action_command_palette()
 
     def on_mount(self) -> None:
         log.info("=" * 60)

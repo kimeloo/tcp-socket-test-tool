@@ -58,7 +58,6 @@ class ChatScreen(Screen):
     BINDINGS = [
         Binding("escape", "go_home", "처음으로", key_display="Esc"),
         Binding("ctrl+r", "reconnect", "재연결", key_display=f"{_MOD}R"),
-        Binding("ctrl+q", "quit", "종료", key_display=f"{_MOD}Q"),
     ]
 
     def __init__(

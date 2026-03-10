@@ -1,4 +1,52 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # TCP Socket Test Tool — Claude 작업 규칙
+
+## 프로젝트 개요
+
+asyncio + Textual 기반의 터미널 UI(TUI) TCP 소켓 클라이언트/서버 도구. Python 3.10+ 필요.
+
+**진입점:** `main.py` 단일 파일로 전체 앱 구성.
+
+## 개발 환경
+
+```bash
+# 가상환경 활성화 (이미 .venv 존재)
+source .venv/Scripts/activate   # Windows
+
+# 의존성 설치
+pip install -r requirements.txt
+
+# 실행
+python main.py
+```
+
+## 아키텍처
+
+전체 코드가 `main.py` 한 파일에 있으며 Textual의 Screen 스택 기반으로 동작한다.
+
+| 클래스 | 역할 |
+|--------|------|
+| `TCPSocketApp` | 앱 진입점, `StartScreen` 푸시 |
+| `StartScreen` | Server/Client 모드 선택 화면 |
+| `ServerConfigScreen` | 포트 입력 후 `ChatScreen(mode="server")` 전환 |
+| `ClientConfigScreen` | 호스트+포트 입력 후 `ChatScreen(mode="client")` 전환 |
+| `ChatScreen` | Server/Client 공용 채팅 화면; `asyncio.start_server` 또는 `asyncio.open_connection` 사용 |
+
+**핵심 패턴:**
+- `@work(exclusive=True)` 데코레이터로 비동기 네트워크 작업을 Textual Worker로 실행
+- `_writer: asyncio.StreamWriter`로 메시지 전송, `reader.read(4096)` 루프로 수신
+- 로그는 `tcp-socket-tool.log` 파일에 기록 (DEBUG 레벨)
+- 서버는 포트 0 입력 시 OS가 자동 배정
+
+## 브랜치 구조
+
+| 브랜치 | 설명 |
+|--------|------|
+| `main` | 안정 릴리즈 |
+| `dev` | 개발 브랜치 |
 
 ## Git Workflow
 

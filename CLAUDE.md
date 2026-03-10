@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 asyncio + Textual 기반의 터미널 UI(TUI) TCP 소켓 클라이언트/서버 도구. Python 3.10+ 필요.
 
-**진입점:** `main.py` 단일 파일로 전체 앱 구성.
+**진입점:** `main.py` → `tcp_socket_tool` 패키지.
 
 ## 개발 환경
 
@@ -25,19 +25,38 @@ python main.py
 
 ## 아키텍처
 
-전체 코드가 `main.py` 한 파일에 있으며 Textual의 Screen 스택 기반으로 동작한다.
+`tcp_socket_tool` 패키지로 모듈 분리되어 있으며 Textual의 Screen 스택 기반으로 동작한다.
 
-| 클래스 | 역할 |
-|--------|------|
-| `TCPSocketApp` | 앱 진입점, `StartScreen` 푸시 |
-| `StartScreen` | Server/Client 모드 선택 화면 |
-| `ServerConfigScreen` | 포트 입력 후 `ChatScreen(mode="server")` 전환 |
-| `ClientConfigScreen` | 호스트+포트 입력 후 `ChatScreen(mode="client")` 전환 |
-| `ChatScreen` | Server/Client 공용 채팅 화면; `asyncio.start_server` 또는 `asyncio.open_connection` 사용 |
+```
+tcp-socket-tool/
+  main.py                          # 진입점 (~6줄)
+  tcp_socket_tool/
+    __init__.py
+    logging_config.py              # 로깅 설정 + 헬퍼 (log, ts, get_local_ip)
+    network.py                     # TUI 독립 TCP 네트워크 로직 (TCPConnection)
+    app.py                         # TCPSocketApp
+    screens/
+      __init__.py                  # Screen 클래스 re-export
+      start.py                     # StartScreen
+      server_config.py             # ServerConfigScreen
+      client_config.py             # ClientConfigScreen
+      chat.py                      # ChatScreen (TCPConnection 콜백 통합)
+```
+
+| 모듈 | 역할 |
+|------|------|
+| `logging_config.py` | 파일 로거 설정, `log`, `ts()`, `get_local_ip()` |
+| `network.py` | `TCPConnection` — 콜백 기반 TCP 연결 관리 (Textual 의존 없음) |
+| `app.py` | `TCPSocketApp` — 앱 진입점, `StartScreen` 푸시 |
+| `screens/start.py` | `StartScreen` — Server/Client 모드 선택 |
+| `screens/server_config.py` | `ServerConfigScreen` — 포트 입력 후 ChatScreen 전환 |
+| `screens/client_config.py` | `ClientConfigScreen` — 호스트+포트 입력 후 ChatScreen 전환 |
+| `screens/chat.py` | `ChatScreen` — TCPConnection 콜백으로 UI 업데이트 |
 
 **핵심 패턴:**
-- `@work(exclusive=True)` 데코레이터로 비동기 네트워크 작업을 Textual Worker로 실행
-- `_writer: asyncio.StreamWriter`로 메시지 전송, `reader.read(4096)` 루프로 수신
+- `TCPConnection`은 콜백 5개(`on_connected`, `on_disconnected`, `on_message`, `on_error`, `on_info`)로 UI와 분리
+- `ChatScreen`이 `@work(exclusive=True)`로 `TCPConnection`의 async 메서드를 호출
+- Screen 간 순환 import는 지연 import로 해결
 - 로그는 `tcp-socket-tool.log` 파일에 기록 (DEBUG 레벨)
 - 서버는 포트 0 입력 시 OS가 자동 배정
 

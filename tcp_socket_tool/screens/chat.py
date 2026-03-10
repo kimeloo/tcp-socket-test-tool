@@ -80,7 +80,7 @@ class ChatScreen(Screen):
         self._conn = TCPConnection(
             on_connected=self._on_connected,
             on_disconnected=self._on_disconnected,
-            on_message=self._on_message,
+            on_message=self._on_net_message,
             on_error=self._on_error,
             on_info=self._on_info,
         )
@@ -145,7 +145,7 @@ class ChatScreen(Screen):
         msg = "연결 끊김" if not peer else f"{peer} 연결 끊김"
         richlog.write(f"[yellow][{ts()}] {msg}[/yellow]")
 
-    def _on_message(self, peer: str, text: str) -> None:
+    def _on_net_message(self, peer: str, text: str) -> None:
         richlog = self.query_one("#log", RichLog)
         richlog.write(f"[bold green][{ts()}] [상대] {text}[/bold green]")
 

@@ -94,12 +94,13 @@ class ChatScreen(Screen):
         yield Static(f"[{self._mode_label}]  연결 대기 중...", id="info-bar")
         yield RichLog(id="log", highlight=True, markup=True)
         with Horizontal(id="input-row"):
-            yield Input(placeholder="메시지 입력 후 Enter", id="msg-input", disabled=True)
+            yield Input(placeholder="메시지 입력 후 Enter", id="msg-input")
             yield Button("전송", id="btn-send", variant="primary", disabled=True)
             yield Button("재연결", id="btn-reconnect", variant="warning")
         yield Footer()
 
     def on_mount(self) -> None:
+        self.query_one("#msg-input", Input).focus()
         if self.mode == "server":
             self._run_server()
         else:
@@ -131,8 +132,8 @@ class ChatScreen(Screen):
         log.info("ChatScreen[%s]: 연결 확립 peer=%s", self.mode, peer)
         info = self.query_one("#info-bar", Static)
         info.update(f"[{self._mode_label}]  연결됨: {peer}")
-        self.query_one("#msg-input", Input).disabled = False
         self.query_one("#btn-send", Button).disabled = False
+        self.query_one("#msg-input", Input).focus()
         self._show_reconnect_ui(False)
         richlog = self.query_one("#log", RichLog)
         richlog.write(f"[green][{ts()}] 연결 성공: {peer}[/green]")
@@ -145,7 +146,6 @@ class ChatScreen(Screen):
             info.update(f"[{self._mode_label}]  {local_ip}:{self.target_port}  |  연결 대기 중...")
         else:
             info.update(f"[{self._mode_label}]  연결 끊김")
-        self.query_one("#msg-input", Input).disabled = True
         self.query_one("#btn-send", Button).disabled = True
         if not self._user_closed:
             self._show_reconnect_ui(True)

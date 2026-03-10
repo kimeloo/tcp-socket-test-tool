@@ -91,6 +91,14 @@ class TCPConnection:
     async def connect(self, host: str, port: int) -> None:
         """클라이언트로서 서버에 연결한다."""
         self.mode = "client"
+        # 재연결을 위한 상태 초기화
+        if self._writer:
+            try:
+                self._writer.close()
+            except Exception:
+                pass
+            self._writer = None
+        self.connected = False
         log.info("TCPConnection[client]: open_connection 시도 %s:%s", host, port)
         self._on_info(f"{host}:{port} 에 연결 시도...")
         try:

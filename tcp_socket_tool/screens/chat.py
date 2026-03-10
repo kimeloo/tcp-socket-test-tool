@@ -15,7 +15,7 @@ from tcp_socket_tool.logging_config import log, ts, get_local_ip
 from tcp_socket_tool.network import TCPConnection
 
 DEFAULT_RECONNECT_INTERVAL = 5.0
-MIN_RECONNECT_INTERVAL = 1.0
+MIN_RECONNECT_INTERVAL = 0.0001
 
 _MOD = "^" if sys.platform == "darwin" else "Ctrl+"
 
@@ -195,15 +195,19 @@ class ChatScreen(Screen):
         while not self._user_closed:
             attempt += 1
             info = self.query_one("#info-bar", Static)
-            remaining = int(self.reconnect_interval)
-            for sec in range(remaining, 0, -1):
-                if self._user_closed:
-                    return
+            remaining = self.reconnect_interval
+            while remaining > 1e-9 and not self._user_closed:
+                if remaining >= 1 and remaining % 1 == 0:
+                    display_sec = f"{int(remaining)}"
+                else:
+                    display_sec = f"{remaining:.1f}"
                 info.update(
                     f"[{self._mode_label}]  재연결 대기 중... "
-                    f"({sec}초 후 시도 #{attempt})"
+                    f"({display_sec}초 후 시도 #{attempt})"
                 )
-                await asyncio.sleep(1)
+                step = min(1.0, remaining)
+                await asyncio.sleep(step)
+                remaining -= step
 
             if self._user_closed:
                 break

@@ -44,7 +44,9 @@ def get_local_ip() -> str:
         ip = s.getsockname()[0]
         s.close()
         return ip
-    except Exception:
+    except Exception as e:
+        log.warning("[E007] get_local_ip: 로컬 IP 감지 실패: %s", e)
+        log.debug("[E007] get_local_ip: 로컬 IP 감지 실패 traceback", exc_info=True)
         return "127.0.0.1"
 
 
@@ -300,7 +302,8 @@ class ChatScreen(Screen):
                 self._writer.close()
                 log.debug("ChatScreen[%s]: writer 닫힘", self.mode)
             except Exception as e:
-                log.warning("ChatScreen[%s]: writer 닫기 실패: %s", self.mode, e)
+                log.warning("[E008] ChatScreen[%s]: writer 닫기 실패: %s", self.mode, e)
+                log.debug("[E008] ChatScreen[%s]: writer 닫기 실패 traceback", self.mode, exc_info=True)
         if self._server:
             self._server.close()
             log.debug("ChatScreen[%s]: server 닫힘", self.mode)
@@ -332,7 +335,8 @@ class ChatScreen(Screen):
             asyncio.get_event_loop().create_task(self._drain())
             log.debug("ChatScreen[%s]: write() 호출 완료, drain 예약", self.mode)
         except Exception as e:
-            log.error("ChatScreen[%s]: 전송 실패: %s", self.mode, e, exc_info=True)
+            log.error("[E001] ChatScreen[%s]: 전송 실패: %s", self.mode, e)
+            log.debug("[E001] ChatScreen[%s]: 전송 실패 traceback", self.mode, exc_info=True)
             richlog.write(f"[red][{ts()}] 전송 실패: {e}[/red]")
 
     async def _drain(self) -> None:
@@ -341,7 +345,8 @@ class ChatScreen(Screen):
                 await self._writer.drain()
                 log.debug("ChatScreen[%s]: drain 완료", self.mode)
             except Exception as e:
-                log.error("ChatScreen[%s]: drain 실패: %s", self.mode, e, exc_info=True)
+                log.error("[E002] ChatScreen[%s]: drain 실패: %s", self.mode, e)
+                log.debug("[E002] ChatScreen[%s]: drain 실패 traceback", self.mode, exc_info=True)
 
     # ── UI 상태 업데이트 헬퍼 ────────────────────────────────
 
@@ -396,7 +401,8 @@ class ChatScreen(Screen):
             async with self._server:
                 await self._server.serve_forever()
         except Exception as e:
-            log.error("ChatScreen[server]: 서버 오류: %s", e, exc_info=True)
+            log.error("[E003] ChatScreen[server]: 서버 오류: %s", e)
+            log.debug("[E003] ChatScreen[server]: 서버 오류 traceback", exc_info=True)
             richlog.write(f"[red][{ts()}] 서버 오류: {e}[/red]")
 
     async def _handle_client(
@@ -418,7 +424,8 @@ class ChatScreen(Screen):
                 richlog = self.query_one("#log", RichLog)
                 richlog.write(f"[bold green][{ts()}] [상대] {text}[/bold green]")
         except Exception as e:
-            log.error("ChatScreen[server]: 수신 루프 예외 peer=%s: %s", peer, e, exc_info=True)
+            log.error("[E004] ChatScreen[server]: 수신 루프 예외 peer=%s: %s", peer, e)
+            log.debug("[E004] ChatScreen[server]: 수신 루프 예외 traceback peer=%s", peer, exc_info=True)
         finally:
             writer.close()
             log.debug("ChatScreen[server]: writer 닫힘 peer=%s", peer)
@@ -437,8 +444,9 @@ class ChatScreen(Screen):
                 self.target_host, self.target_port
             )
         except Exception as e:
-            log.error("ChatScreen[client]: 연결 실패 %s:%s → %s",
-                      self.target_host, self.target_port, e, exc_info=True)
+            log.error("[E005] ChatScreen[client]: 연결 실패 %s:%s → %s",
+                      self.target_host, self.target_port, e)
+            log.debug("[E005] ChatScreen[client]: 연결 실패 traceback", exc_info=True)
             richlog.write(f"[red][{ts()}] 연결 실패: {e}[/red]")
             return
 
@@ -458,7 +466,8 @@ class ChatScreen(Screen):
                 text = data.decode(errors="replace")
                 richlog.write(f"[bold green][{ts()}] [상대] {text}[/bold green]")
         except Exception as e:
-            log.error("ChatScreen[client]: 수신 루프 예외 peer=%s: %s", peer, e, exc_info=True)
+            log.error("[E006] ChatScreen[client]: 수신 루프 예외 peer=%s: %s", peer, e)
+            log.debug("[E006] ChatScreen[client]: 수신 루프 예외 traceback peer=%s", peer, exc_info=True)
         finally:
             writer.close()
             log.debug("ChatScreen[client]: writer 닫힘 peer=%s", peer)

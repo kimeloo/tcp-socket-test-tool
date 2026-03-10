@@ -200,7 +200,7 @@ class ChatScreen(Screen):
                 if self._user_closed:
                     return
                 info.update(
-                    f"[CLIENT]  재연결 대기 중... "
+                    f"[{self._mode_label}]  재연결 대기 중... "
                     f"({sec}초 후 시도 #{attempt})"
                 )
                 await asyncio.sleep(1)
@@ -210,7 +210,7 @@ class ChatScreen(Screen):
 
             richlog = self.query_one("#log", RichLog)
             richlog.write(f"[yellow][{ts()}] 재연결 시도 중... (시도 #{attempt})[/yellow]")
-            info.update(f"[CLIENT]  재연결 시도 중... (시도 #{attempt})")
+            info.update(f"[{self._mode_label}]  재연결 시도 중... (시도 #{attempt})")
 
             await self._conn.connect(self.target_host, self.target_port)
 

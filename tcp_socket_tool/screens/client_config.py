@@ -85,7 +85,7 @@ class ClientConfigScreen(Screen):
             label.update("사용 안 함")
 
     @on(Button.Pressed, "#btn-connect")
-    @on(Input.Submitted)
+    @on(Input.Submitted, "#host-input, #port-input")
     def connect(self) -> None:
         from tcp_socket_tool.screens.chat import ChatScreen
         host = self.query_one("#host-input", Input).value.strip() or "127.0.0.1"

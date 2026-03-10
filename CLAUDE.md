@@ -47,6 +47,7 @@ python main.py
 |--------|------|
 | `main` | 안정 릴리즈 |
 | `dev` | 개발 브랜치 |
+| `release/v{버전}` | 릴리즈 브랜치 |
 
 ## Git Workflow
 
@@ -111,3 +112,10 @@ type: 설명
 - [ ] 커밋 컨벤션 준수
 - [ ] 관련 이슈 링크 포함
 - [ ] 로컬에서 테스트 완료
+
+### CHANGELOG
+
+- 기능 추가, 버그 수정, 리팩토링 등 사용자에게 의미 있는 변경이 있을 때 `CHANGELOG.md`를 업데이트한다.
+- [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식을 따른다.
+- 카테고리: `Added`, `Changed`, `Fixed`, `Removed`, `CI/CD`, `Chore`
+- 새 릴리즈 시 `## [버전] - YYYY-MM-DD` 섹션을 추가한다.

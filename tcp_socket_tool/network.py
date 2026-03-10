@@ -81,6 +81,7 @@ class TCPConnection:
             log.debug("[E004] TCPConnection[server]: 수신 루프 예외 traceback peer=%s", peer, exc_info=True)
         finally:
             writer.close()
+            await writer.wait_closed()
             log.debug("TCPConnection[server]: writer 닫힘 peer=%s", peer)
             self.connected = False
             self._writer = None
@@ -95,6 +96,7 @@ class TCPConnection:
         if self._writer:
             try:
                 self._writer.close()
+                await self._writer.wait_closed()
             except Exception:
                 pass
             self._writer = None
@@ -130,6 +132,7 @@ class TCPConnection:
             log.debug("[E006] TCPConnection[client]: 수신 루프 예외 traceback peer=%s", peer, exc_info=True)
         finally:
             writer.close()
+            await writer.wait_closed()
             log.debug("TCPConnection[client]: writer 닫힘 peer=%s", peer)
             self.connected = False
             self._writer = None

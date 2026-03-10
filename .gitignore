@@ -30,5 +30,8 @@ ENV/
 Thumbs.db
 desktop.ini
 
+# Claude Code
+.claude/
+
 # Distribution / packaging
 *.whl

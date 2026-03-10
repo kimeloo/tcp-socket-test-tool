@@ -4,12 +4,12 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from textual import events, on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.widgets import Button, Footer, Input, RichLog, Static
 from textual.screen import Screen
-from textual import on, work
+from textual.widgets import Button, Footer, Input, RichLog, Static
 
 from tcp_socket_tool.logging_config import log, ts, get_local_ip
 from tcp_socket_tool.network import TCPConnection
@@ -98,6 +98,15 @@ class ChatScreen(Screen):
             yield Button("전송", id="btn-send", variant="primary", disabled=True)
             yield Button("재연결", id="btn-reconnect", variant="warning")
         yield Footer()
+
+    def on_key(self, event: events.Key) -> None:
+        inp = self.query_one("#msg-input", Input)
+        if self.focused is inp:
+            return
+        if event.is_printable and event.character:
+            inp.focus()
+            inp.insert_text_at_cursor(event.character)
+            event.prevent_default()
 
     def on_mount(self) -> None:
         self.query_one("#msg-input", Input).focus()

@@ -8,9 +8,12 @@
 
 - Client 자동 재연결 기능 (ClientConfigScreen에서 활성화/간격 설정)
 - Client 수동 재연결 버튼 및 단축키 (`Ctrl+R`)
+- ChatScreen 진입 시 메시지 입력 필드 자동 포커스
+- 포커스가 입력 필드 외부에 있을 때 printable key 입력 시 입력 필드로 리다이렉트
 
 ### Changed
 
+- 메시지 전송을 연결 상태에 따라 제어 (연결 전/끊김 시 비활성화, 연결 성공 시 활성화)
 - ChatScreen 버튼 토글 로직을 `_show_reconnect_ui()` 헬퍼로 통합
 - 자동 재연결 루프를 `_auto_reconnect_loop()`으로 분리하여 `_run_client()` 단순화
 - mode_label 중복 계산을 `_mode_label` 속성으로 통합
